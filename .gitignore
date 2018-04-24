@@ -102,3 +102,7 @@ ENV/
 
 #idea
 .idea/
+
+#data
+*Cached/
+db/

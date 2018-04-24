@@ -4,6 +4,7 @@ import requests
 import time
 import os
 import re
+import json
 
 
 class Spider(object):
@@ -15,6 +16,7 @@ class Spider(object):
 		}
 		self.page = ""
 		self.items = []
+		self.driver = None
 
 	def set_headers(self, **kwargs):
 		for k, v in kwargs.items():
@@ -25,7 +27,10 @@ class Spider(object):
 		s = r.content.decode("utf-8")
 		self.page = s
 
-	def cached_url(self, url, folder="cached"):
+	"""
+		将页面缓存到本地，之后如果请求相同的url，则直接访问本地文件
+	"""
+	def cached_url(self, url, folder="cached", render=False):
 		filename = re.sub(r"[:/?=]+", "#", url) + ".html"
 		file = os.path.join(folder, filename)
 		if os.path.exists(file):
@@ -35,11 +40,13 @@ class Spider(object):
 		else:
 			if not os.path.exists(folder):
 				os.mkdir(folder)
+			if render:
+				self.rendered_page(url)
+			else:
+				self.get_page(url)
 			with open(file, "w", encoding="utf-8") as f:
-				r = requests.get(url, self.headers)
-				s = r.content.decode("utf-8")
-				f.write(s)
-				self.page = s
+				f.write(self.page)
+
 
 	"""
 		适用于需要通过下拉滚轮来加载条目的页面，该函数将返回加载好的页面的源码
@@ -48,25 +55,56 @@ class Spider(object):
 		wait_time：每次滑动到底部等待的时间
 	"""
 	def load_dynamic_page(self, url, iter_count=5, wait_time=5):
-		# 创建Chrome参数对象
-		opt = webdriver.ChromeOptions()
-		# 把Chrome设置为无界面模式
-		opt.set_headless()
-		# 创建无界面Chrome对象
-		driver = webdriver.Chrome(options=opt)
-		driver.get(url)
+		self.open_driver()
+		self.driver.get(url)
 		for i in range(iter_count):
-			time.sleep(wait_time)
 			# 滚动到页面底部
-			driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-		self.page = driver.page_source
+			self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+			time.sleep(wait_time)
+		self.page = self.driver.page_source
+
+	"""
+		适用于只需要渲染页面即可即可的请求
+		url：请求的网址
+	"""
+	def rendered_page(self, url):
+		if not self.driver:
+			self.open_driver()
+		self.driver.get(url)
+		time.sleep(3)
+		self.page = self.driver.page_source
+
+	def open_driver(self):
+		opt = webdriver.ChromeOptions()
+		# 不加载图片
+		prefs = {"profile.managed_default_content_settings.images": 2}
+		opt.add_experimental_option("prefs", prefs)
+		# 设置为无头模式
+		# opt.set_headless()
+		self.driver = webdriver.Chrome(options=opt)
+
+	def destroy(self):
+		self.items.clear()
+		self.page = ""
+		self.driver.close()
+		self.driver = None
 
 	"""
 		适用于由多个相似条目组成的页面，将页面中每个条目解析为对象
 		selector：选择所有相似条目的CSS选择器
 		method：将单个条目解析为对象的算法
+		kwargs: 除了解析出的每个item，其他需要加在对象上的属性
 	"""
-	def parsed_items(self, selector, method):
-		e = pq(self.page)
-		items = e(selector)
-		self.items.extend([method(pq(it)) for it in items])
+	def parsed_items(self, selector, method, **kwargs):
+		if self.page:
+			e = pq(self.page)
+			items = e(selector)
+			self.items.extend([method(pq(it), **kwargs) for it in items])
+
+	def clear(self):
+		self.items.clear()
+		self.page = ""
+
+	def save(self, filename):
+		with open(filename, "w", encoding="utf-8") as f:
+			f.write(json.dumps(self.items, ensure_ascii=False, indent=2))

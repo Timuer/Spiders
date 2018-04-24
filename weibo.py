@@ -42,10 +42,8 @@ if __name__ == "__main__":
 	for c in categories:
 		u = url_from_category(categories[c])
 		spider.load_dynamic_page(u, 5)
-		print(spider.page)
 		spider.parsed_items("[class^='UG_list']", parse_item)
-	for i in spider.items:
-		print(i)
+		spider.save("weibo.json")
 
 
 

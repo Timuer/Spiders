@@ -40,5 +40,4 @@ if __name__ == "__main__":
 		u = url_from_category(categories[c])
 		spider.load_dynamic_page(u, 5)
 		spider.parsed_items(".rbox-inner", parse_item)
-	for i in spider.items:
-		print(i)
+		spider.save("toutiao.json")

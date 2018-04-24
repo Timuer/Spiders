@@ -30,5 +30,4 @@ if __name__ == "__main__":
 		url = "https://movie.douban.com/top250?start={}".format(i)
 		spider.cached_url(url, folder="doubanCached")
 		spider.parsed_items(".item", movie_from_div)
-	for m in spider.items:
-		print(m)
+		spider.save("douban.json")
