@@ -3,7 +3,6 @@ from LightSpiderFrame import Spider
 from utils import Model
 from utils import reconnect
 import json
-import os
 
 base_url = "https://wh.lianjia.com"
 classes = ["ershoufang"]
@@ -36,7 +35,6 @@ def make_url(base, cls, position, page):
 	return "/".join([base, cls, position, "pg{}".format(page)])
 
 
-@reconnect
 def get_page_limit(base, cls, pos):
 	url = "/".join([base, cls, pos])
 	spider.cached_url(url, folder="lianjiaCached", render=True)
@@ -62,7 +60,6 @@ def parse_item(item, **kwargs):
 	return h
 
 
-@reconnect
 def parse_from_pages():
 	for cls in classes:
 		for pos in positions:
@@ -70,15 +67,23 @@ def parse_from_pages():
 			for pg in range(1, limit + 1):
 				url = make_url(base_url, cls, pos, pg)
 				print("caching {}".format(url))
-				spider.cached_url(url, "lianjiaCached", render=True)
+				try:
+					spider.cached_url(url, "lianjiaCached", render=True)
+				except Exception as ex:
+					print(ex)
+					continue
 				spider.parsed_items(".clear.info", parse_item, cls=cls, position=pos)
-			spider.save("db{}{}.json".format(os.sep, pos))
-			spider.clear()
-	spider.destroy()
+		spider.save()
+		spider.clear()
 
 
 if __name__ == "__main__":
-	parse_from_pages()
+	try:
+		parse_from_pages()
+	except Exception as ex:
+		print(ex)
+	finally:
+		spider.destroy()
 
 
 

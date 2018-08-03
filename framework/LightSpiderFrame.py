@@ -1,5 +1,6 @@
 from pyquery import PyQuery as pq
 from selenium import webdriver
+from pymongo import MongoClient
 import requests
 import time
 import os
@@ -17,6 +18,7 @@ class Spider(object):
 		self.page = ""
 		self.items = []
 		self.driver = None
+		self.db = None
 
 	def set_headers(self, **kwargs):
 		for k, v in kwargs.items():
@@ -71,7 +73,6 @@ class Spider(object):
 		if not self.driver:
 			self.open_driver()
 		self.driver.get(url)
-		time.sleep(3)
 		self.page = self.driver.page_source
 
 	def open_driver(self):
@@ -80,8 +81,9 @@ class Spider(object):
 		prefs = {"profile.managed_default_content_settings.images": 2}
 		opt.add_experimental_option("prefs", prefs)
 		# 设置为无头模式
-		# opt.set_headless()
+		opt.set_headless()
 		self.driver = webdriver.Chrome(options=opt)
+		self.driver.set_page_load_timeout(20)
 
 	def destroy(self):
 		self.items.clear()
@@ -105,6 +107,11 @@ class Spider(object):
 		self.items.clear()
 		self.page = ""
 
-	def save(self, filename):
-		with open(filename, "w", encoding="utf-8") as f:
-			f.write(json.dumps(self.items, ensure_ascii=False, indent=2))
+	def init_db(self):
+		self.db = MongoClient("localhost", 27017).spiders
+
+	def save(self):
+		if not self.db:
+			self.init_db()
+		for it in self.items:
+			self.db["lianjia"].insert(it.__dict__)
