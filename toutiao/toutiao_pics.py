@@ -89,7 +89,7 @@ def save_image(content):
 			f.write(content)
 			f.close()
 
-if __name__ == "__main__":
+def main():
 	for i in range(LOAD_TIMES):
 		html = get_index_page(i * NUM_PER_TIME, KEY_WORD)
 		if html:
@@ -99,3 +99,6 @@ if __name__ == "__main__":
 					images = parse_detail_page(detail_html)
 					save_to_mongo({"title": title, "images": images})
 
+
+# if __name__ == "__main__":
+# 	main()

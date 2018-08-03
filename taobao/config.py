@@ -1,0 +1,5 @@
+KEY_WORD = "手办"
+
+MONGO_URL = "mongodb://127.0.0.1:27017"
+MONGO_DATABASE = "淘宝"
+MONGO_TABLE = KEY_WORD
